@@ -21,7 +21,7 @@
 
 # ## Dependency
 
-# In[1]:
+# In[20]:
 
 
 #@title Dependency
@@ -51,7 +51,7 @@ import connectorx as cx
 # - SYMBOL_3DIGITS：小数点以下が3桁の通貨ペア(USDJPY等)の配列
 # - DIGIT_MAGNIFICATION：通貨ペアごとの倍率辞書(5桁：100倍、4桁10倍、3桁1倍)
 
-# In[3]:
+# In[21]:
 
 
 # @title Class Valiables
@@ -138,7 +138,7 @@ TP_LC_STEP = int(inifile.get('COMMOM', 'TP_LC_STEP'))
 # LINE Notifyを利用するためのトークン
 # 2025/3/31 Line Notify 終了に伴い、Line Message APIに切り替える
 #LINE_NOTIFY_TOKEN = inifile.get('COMMOM', 'LINE_NOTIFY_TOKEN')
-LINE_MESSAGING_API_TOKEN = inifile.get('COMMOM', 'LINE_MESSAGING_API_TOKEN')
+# LINE_MESSAGING_API_TOKEN = inifile.get('COMMOM', 'LINE_MESSAGING_API_TOKEN')
 # 2026/6/17 Line Message APIだと1か月に200メッセージしか送れないためntfy(ntfy.sh)に切り替える
 URL_TOPIC_NAME = inifile.get('COMMOM', 'URL_TOPIC_NAME')
 
@@ -215,7 +215,7 @@ CONN_URL=None
 # 
 # Environment package では、ログ空間を"DRL.Environment"とする
 
-# In[ ]:
+# In[22]:
 
 
 #@title Logger
@@ -285,7 +285,7 @@ logger.critical('Critical level massage.')
 # 
 # 
 
-# In[ ]:
+# In[23]:
 
 
 #@title class EnvironmentCommon
@@ -492,12 +492,12 @@ class EnvironmentCommon:
       TRAIN_RESULT_PATH_VOID = TRAIN_RESULT_PATH_VOID_DEMO
       TMP_TRAIN_RESULT_PATH = TMP_TRAIN_RESULT_PATH_DEMO
       DBNAME = DBNAME_DEMO
-
+  '''
   @classmethod
   def send_line_notify(cls,notification_message):
     headers = {"Content_Type": "application/json","Authorization": "Bearer " + LINE_MESSAGING_API_TOKEN}
     requests.post("https://api.line.me/v2/bot/message/broadcast",headers=headers,json={"messages": [{"type": "text","text": notification_message}]}).json()
-
+  '''
   @classmethod
   def send_ntfy_message(cls,ttl,msg):
     # 通知を送信
@@ -660,7 +660,7 @@ class EnvironmentCommon:
 #    - 時間足データ(pandas.DataFrame)
 # 
 
-# In[ ]:
+# In[24]:
 
 
 #@title class PriceData
@@ -776,7 +776,7 @@ class PriceData:
 # 
 # メモ：GetRewardとResetRewardを作る
 
-# In[ ]:
+# In[25]:
 
 
 #@title class TrainData
@@ -862,7 +862,7 @@ class TrainData:
 #  - 1epi=1週の時は、月曜日の0:00が最初(=0)、土曜日の0:00の2つ前の足が最後(=1)
 #  - 1epi=1年の時は、当年のISO第1週目の月曜日の0:00が最初(=0)、翌年のISO第1週の2週前の土曜日の0:00の2つ前の足が最後(=1)
 
-# In[ ]:
+# In[26]:
 
 
 #@title class Account
@@ -1218,7 +1218,9 @@ class Account:
     # MAX_RETRY_NUM回試行してもRealSpreadが閾値未満にならなかったときは、PositionOpenPriceを0.0としてオーダー不成立とする
     sell_open_price = 0.0
     buy_open_price = 0.0
-
+    # 2026/8/9 クローズの値を格納する
+    sell_close_price = 0.0
+    buy_close_price = 0.0
 
     for n in range(MAX_RETRY_NUM[self.period]):
       # 2025/2/22 都度DBから取得せずにあらかじめDBから取得したpandasDataFrameから取得する
@@ -1241,6 +1243,17 @@ class Account:
         # tickが取得できなかった場合は、１分進める
         logger.warning('Account.EvaluateRewrd:No ticks. From %s To %s' 
                        %(utc_from.strftime('%Y-%m-%d %H:%M'),utc_to.strftime('%Y-%m-%d %H:%M')))
+
+        # 2026/8/18 試行回数の最後の1回でもtickが取得できない場合はアクションごとに振舞いを変える
+        if(n == MAX_RETRY_NUM[self.period]-1):
+          # no_action position_closeの時はそのままなので何もしない
+          # long_entry,short_entryの時はエントリーできないので no_actionに変更
+          if actn_idx == long_entry or actn_idx == short_entry:
+            action_idx = no_action
+          # close_and_long,close_and_shortの時はクローズだけするので position_close に変更
+          elif actn_idx == close_and_long or actn_idx == close_and_short:
+            action_idx = position_close
+
         utc_from = utc_from + datetime.timedelta(minutes=1)
         utc_to = utc_from + datetime.timedelta(minutes=1)
 
@@ -1258,6 +1271,20 @@ class Account:
       # if real_spread >= REAL_SPREAD_LIMIT_LIST[self.symbol]:
       if real_spread >= self.real_sprad_limit:
         logger.debug('Account.EvaluateRewrd:%s real_spread(%.3f) exceeds limit (%.3f).' %(utc_from,real_spread,self.real_sprad_limit))
+        # 2026/8/9 試行回数の最後の1回でもリアルスプレッドが規定値より大きいの場合はアクションごとに振舞いを変える
+        if(n == MAX_RETRY_NUM[self.period]-1):
+          # no_action の時はそのままなので何もしない
+          # long_entry,short_entryの時はエントリーできないので no_actionに変更
+          if actn_idx == long_entry or actn_idx == short_entry:
+            action_idx = no_action
+          # close_and_long,close_and_shortの時はクローズだけするので position_close に変更
+          elif actn_idx == close_and_long or actn_idx == close_and_short:
+            action_idx = position_close
+
+          # postion_closeのためにtickの値を格納する
+          sell_close_price = buy_price
+          buy_close_price = sell_price
+
         # tick取得時間を1分進める
         utc_from = utc_from + datetime.timedelta(minutes=1)
         utc_to = utc_from + datetime.timedelta(minutes=1)
@@ -1267,9 +1294,9 @@ class Account:
         sell_open_price = sell_price
         buy_open_price = buy_price
 
-        ### 正確には、ポジションクローズをするときにもreal spreadを考慮しているので
-        ### real spread以下に収まったときにクローズを執行するシミュレーションが良い（未実装）
-
+        # 2026/8/9 postion_closeのためにtickの値を格納する
+        sell_close_price = buy_price
+        buy_close_price = sell_price
         break
 
     # acount(last_dt(1:00))の状態をaccount(2:00(test_dt))に一旦コピーする
@@ -1289,39 +1316,144 @@ class Account:
       # longとshortを分割する
       # self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
       #   = [test_dt, df_price_data.loc[test_dt,'open'] + df_price_data.loc[test_dt,'spread']/(1000*self.magnification), self.pos_scale, 0.0, 0.0, 0.0]
-      self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
-         = [test_dt, buy_open_price, self.pos_scale, 0.0, 0.0, 0.0]
+      # 2026/8/19 bug fix: buy_open_price が0.0の時はエントリーしない（できない）
+      # ここに来るときは、ポジションも損益も0のはずなのでdf_accountは空にする
+      if(buy_open_price == 0.0):
+        self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+           = [None, 0.0, 0.0, 0.0, 0.0, 0.0]
+      else:
+        self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+           = [test_dt, buy_open_price, self.pos_scale, 0.0, 0.0, 0.0]
     elif(actn_idx == short_entry):
       logger.debug('Account.EvaluateRewrd:Action_index=%s, Short Entry.' %(actn_idx))
       # account(2:00)に、次の値を格納する
       # pos_open_datetime = test_dt(2:00), pos_open_price = price_data(2:00).open, has_position = -1, float_pl = 0.0, close_pl = 0.0
       # pos_open_dataにはBidを格納する
       # longとshortを分割する
-      self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
-         = [test_dt, sell_open_price, 0.0, self.pos_scale, 0.0, 0.0]
+      # 2026/8/19 bug fix: sell_open_price が0.0の時はエントリーしない（できない）
+      # ここに来るときは、ポジションも損益も0のはずなのでdf_accountは空にする
+      if(sell_open_price == 0.0):
+        self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+           = [None, 0.0, 0.0, 0.0, 0.0, 0.0]
+      else:
+        self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+           = [test_dt, sell_open_price, 0.0, self.pos_scale, 0.0, 0.0]
     elif(actn_idx == position_close):
       logger.debug('Account.EvaluateRewrd:Action_index=%s, Position Close.' %(actn_idx))
       # account(2:00)に、次の値を格納する
       # pos_open_datetime = none, pos_open_price = 0.0, has_position = 0, float_pl = 0.0, close_pl = float_pl(1:00)
       # longとshortを分割する
-      self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
-         = [None, 0.0, 0.0, 0.0 , 0.0, self.df_account.loc[last_dt,'float_pl']]
+      # self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+      #   = [None, 0.0, 0.0, 0.0 , 0.0, self.df_account.loc[last_dt,'float_pl']]
+      # 2026/8/9 position_close の際は real_spread を考慮する
+      if(self.df_account.loc[last_dt,'has_long'] > 0.0):
+        # Long positionを持っている場合
+        # buy_close_price は bid で評価する
+        # 2026/08/18 bug fix:buy_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        if(buy_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+            = [None, 0.0, 0.0, 0.0 , 0.0, self.df_account.loc[last_dt,'float_pl']] 
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+            = [None, 0.0, 0.0, 0.0 , 0.0
+               , (buy_close_price - self.df_account.loc[last_dt,'pos_open_price']) * self.magnification]
+      if(self.df_account.loc[last_dt,'has_short'] > 0.0):
+        # Short positionを持っている場合
+        # sell_close_price は ask で評価する
+        # 2026/08/18 bug fix:sell_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        if(sell_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+            = [None, 0.0, 0.0, 0.0 , 0.0, self.df_account.loc[last_dt,'float_pl']]
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+            = [None, 0.0, 0.0, 0.0 , 0.0
+               , (self.df_account.loc[last_dt,'pos_open_price'] - sell_close_price) * self.magnification]
     elif(actn_idx == close_and_long):
       logger.debug('Account.EvaluateRewrd:Action_index=%s, Close and Long.' %(actn_idx))
       # account(2:00)に、次の値を格納する
       # pos_open_datetime = test_dt(2:00), pos_open_price = price_data(2:00).open, has_position = 1, float_pl = 0.0, close_pl = float_pl(1:00)
       # pos_open_dataにはAskを格納する
       # longとshortを分割する
-      self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
-         = [test_dt, buy_open_price, self.pos_scale, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+      # 2026/8/9 position_close の際は real_spread を考慮する
+      # self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+      #    = [test_dt, buy_open_price, self.pos_scale, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+      if(self.df_account.loc[last_dt,'has_long'] > 0.0):
+        # Long positionを持っている場合
+        # buy_close_price は bid で評価する
+        # 2026/08/18 bug fix:buy_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        # 2026/08/19 bug fix:closeとentryの処理を分離する
+        if(buy_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0
+                , (buy_close_price - self.df_account.loc[last_dt,'pos_open_price']) * self.magnification]
+        # 2026/8/19 bug fix: buy_open_price が0.0の時はエントリーしない（できない）
+        # ただし、クローズした損益は残す
+        if(buy_open_price > 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long']]\
+             = [test_dt, buy_open_price, self.pos_scale]
+      if(self.df_account.loc[last_dt,'has_short'] > 0.0):
+        # Short positionを持っている場合
+        # sell_close_price は ask で評価する
+        # 2026/08/18 bug fix:sell_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        # 2026/08/19 bug fix:closeとentryの処理を分離する
+        if(sell_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0
+                , (self.df_account.loc[last_dt,'pos_open_price'] - sell_close_price) * self.magnification]
+        # 2026/8/19 bug fix: buy_open_price が0.0の時はエントリーしない（できない）
+        # ただし、クローズした損益は残す
+        if(buy_open_price > 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long']]\
+             = [test_dt, buy_open_price, self.pos_scale]
     elif(actn_idx == close_and_short):
       logger.debug('Account.EvaluateRewrd:Action_index=%s, Close and Short.' %(actn_idx))
       # account(2:00)に、次の値を格納する
       # pos_open_datetime = test_dt(2:00), pos_open_price = price_data(2:00).open, has_position = 1, float_pl = 0.0, close_pl = float_pl(1:00)
       # pos_open_dataにはBidを格納する
       # longとshortを分割する
-      self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
-         = [test_dt, sell_open_price, 0.0, self.pos_scale, 0.0, self.df_account.loc[last_dt,'float_pl']]
+      # 2026/8/9 position_close の際は real_spread を考慮する
+      # self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+      #    = [test_dt, sell_open_price, 0.0, self.pos_scale, 0.0, self.df_account.loc[last_dt,'float_pl']]
+      if(self.df_account.loc[last_dt,'has_long'] > 0.0):
+        # Long positionを持っている場合
+        # buy_close_price は bid で評価する
+        # 2026/08/18 bug fix:buy_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        # 2026/08/19 bug fix:closeとentryの処理を分離する
+        if(buy_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0
+                , (buy_close_price - self.df_account.loc[last_dt,'pos_open_price']) * self.magnification]
+        # 2026/8/19 bug fix: buy_open_price が0.0の時はエントリーしない（できない）
+        # ただし、クローズした損益は残す
+        if(sell_open_price > 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_short']]\
+             = [test_dt, sell_open_price, self.pos_scale]
+      if(self.df_account.loc[last_dt,'has_short'] > 0.0):
+        # Short positionを持っている場合
+        # sell_close_price は ask で評価する
+        # 2026/08/18 bug fix:sell_close_price==0.0の時（tickが取得できなかった時）、便宜上float_plでクローズさせる
+        # 2026/08/19 bug fix:closeとentryの処理を分離する
+        if(sell_close_price == 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0, self.df_account.loc[last_dt,'float_pl']]
+        else:
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_long','has_short', 'float_pl', 'close_pl']]\
+             = [None, 0.0, 0.0, 0.0, 0.0
+                , (self.df_account.loc[last_dt,'pos_open_price'] - sell_close_price) * self.magnification]
+        # 2026/8/19 bug fix: buy_open_price が0.0の時はエントリーしない（できない）
+        # ただし、クローズした損益は残す
+        if(sell_open_price > 0.0):
+          self.df_account.loc[test_dt, ['pos_open_datetime', 'pos_open_price', 'has_short']]\
+             = [test_dt, sell_open_price, self.pos_scale]
     else:
       # 定義されていないので、エラー
       # EnvironmentCommon.send_line_notify(ACCOUNT_TRADE_MODE_STR[ACCOUNT_TRADE_MODE]+'\n'+TRADE_SYSTEM+'\n'+TRADE_SYMBOL+'_'+TRADE_PERIOD
@@ -1422,7 +1554,10 @@ class Account:
       #                                   +'Account.SetTickDataPeriod:Copy Tick Range Failed.\n'
       #                                   +'From %s To %s Count of ticks_frame %d'
       #                                   %(start_date.strftime('%Y-%m-%d %H:%M'),end_date.strftime('%Y-%m-%d %H:%M'),len(self.ticks_frame)))
-      sys.exit("Account.SetTickDataPeriod:Copy Tick Range Failed.")
+      # sys.exit("Account.SetTickDataPeriod:Copy Tick Range Failed.")
+      # 2026/8/21 コピーに失敗した場合はシステムエラーとせずにFalseを返す
+      logger.warning("Account.SetTickDataPeriod:Copy Tick Range Failed.")
+      return(False)
 
     # 秒での時間をdatetime形式に変換する
     # DBにはtime_mscはTimestamp型で格納されている。DBからデータ取得時にソートされている
@@ -1430,7 +1565,7 @@ class Account:
     # self.ticks_frame['time_msc']=pd.to_datetime(self.ticks_frame['time_msc'], unit='ms')
     self.ticks_frame = self.ticks_frame.set_index('time_msc')
     # self.ticks_frame.sort_index(inplace=True)
-    return
+    return(True)
 
   def DropTickDataPeriod(self):
     if self.ticks_frame is not None:
@@ -1449,7 +1584,7 @@ class Account:
 
 # ## Dependency
 
-# In[ ]:
+# In[27]:
 
 
 #@title Dependency
@@ -1465,7 +1600,7 @@ import math
 # ## Logger
 # - Loggerの実行は、Environmentと切り離されたときに実行する
 
-# In[ ]:
+# In[28]:
 
 
 #@title Logger Agent
@@ -1510,7 +1645,7 @@ logger_agent.critical('Critical level massage.')
 # a5:PositionClose&ShortEntry<br>
 # ※両建てはしない。ドテンを想定する。
 
-# In[ ]:
+# In[29]:
 
 
 #@title class Agent { output-height: 200 }
@@ -1718,7 +1853,7 @@ class Agent():
 # ## クラス Brain
 # Agent内のニューラルネット部分をBrainクラスとして別途定義
 
-# In[ ]:
+# In[30]:
 
 
 #@title class Brain { output-height: 200 }
@@ -1890,7 +2025,7 @@ class Brain(nn.Module):
 # ## Logger
 # - TrainerパッケージのLoggerインスタンスはlogger_trainerとする
 
-# In[ ]:
+# In[31]:
 
 
 #@title Logger Trainer
@@ -1912,7 +2047,7 @@ logger_trainer.critical('Critical level massage.')
 
 # ## クラス Trainer
 
-# In[ ]:
+# In[39]:
 
 
 #@title class Trainer
@@ -1959,7 +2094,13 @@ class Trainer():
     self.agnt = Agent(self.symbol,self.period,self.input_num,self.output_num,self.start_date_time,self.load_flg,self.file_path)
 
     # トレード期間(Mon 1:00-Fri 23:00)のprace_dataをまとめて取得する
-    self.UpdateTradePeriod(self.start_date_time, self.test_duration)
+    # 2026/8/21 tickデータがないなどで UpdateTradePeriod が失敗した場合は処理を中断する
+    if(not self.UpdateTradePeriod(self.start_date_time, self.test_duration)):
+      ## ForComandline
+      # 標準出力で999を返す
+      print(999)
+      logger_trainer.error('Trainer.__init()__:Some problem has occred in UpdateTradePeriod.')
+      sys.exit('Training halted.') 
 
     # 詳細のテスト結果(acnt.df_account)を格納する
     self.df_detail_testresult = pd.DataFrame()
@@ -1992,7 +2133,7 @@ class Trainer():
       # AccountDatFrameとRewardDataFrameは都度破棄する
       # NNの更新はしない
       for w in every_monday:
-        self._ExecTrade(w,train_mode,return_detail,pretrade_flg=True)
+        not self._ExecTrade(w,train_mode,return_detail,pretrade_flg=True)
       # トレード・トレーニングを実施(１週間分)
       self._ExecTrade(self.start_date_time,train_mode,return_detail,pretrade_flg=False)
 
@@ -2004,11 +2145,17 @@ class Trainer():
 
   def _ExecTrade(self,stdt,train_mode,return_detail,pretrade_flg):
     if pretrade_flg:
-      logger_trainer.info('Trainer.TrainAgent:◇◇PreTraning Epsorde %d Start on %s◇◇' %(self.enum+1,stdt))
+      logger_trainer.info('Trainer._ExecTrade:◇◇PreTraning Epsorde %d Start on %s◇◇' %(self.enum+1,stdt))
     else:
-      logger_trainer.info('Trainer.TrainAgent:◆◆Traning Epsorde %d Start on %s◆◆' %(self.enum+1,stdt))
-
-    self.UpdateTradePeriod(stdt, self.test_duration)
+      logger_trainer.info('Trainer._ExecTrade:◆◆Traning Epsorde %d Start on %s◆◆' %(self.enum+1,stdt))
+    # 2026/8/21 tickデータ不備などによりテストデータがセットできないときは処理を中断する（トレーニング中止）
+    if(not self.UpdateTradePeriod(stdt, self.test_duration)):
+      # トレーニングを終了させる
+      ## ForComandline
+      # 標準出力で999を返す
+      print(999)
+      logger_trainer.error('Trainer._ExecTrade:While UpdateTradePeriod, some problem has occured.')
+      sys.exit('Training halted.') 
     lstdt = self._GetLastDateTime(stdt, self.delta_time)
     tstdt = stdt
     self.acnt.SetAccount(lstdt)
@@ -2210,10 +2357,15 @@ class Trainer():
     logger_trainer.info('Trainer.ExecBacktest:◆◇◆Start Backtesting.◆◇◆')
     if(test_duration == 'W'):
       for y in range(start_year,end_year+1):
-        for w in range(2,52):
+        # 2026/8/21テスト期間をその年のiso 2週目からiso 最終週(52or53)の１週前とする
+        # 12/28は必ずiso weekの最終週に含まれることを利用する
+        test_end_week = datetime.datetime(y, 12, 28).isocalendar().week
+        for w in range(2,test_end_week): # range()は test_end_week そのものは含まれないため、自然と１週前になる
           # 初めの時間足の初期値を作る
           self.start_date_time = datetime.datetime.fromisocalendar(y, w, 1)
-          self.UpdateTradePeriod(self.start_date_time, test_duration)
+          # 2026/8/21 tickが存在しないなど、テスト対象期間のデータがセットできないときはその週のテストをスキップする 
+          if(not self.UpdateTradePeriod(self.start_date_time, test_duration)):
+            continue
           # 推論モードでバックテストを実施する
           self.TrainAgent(1,train_mode=False)
           logger_trainer.debug('Trainer.ExecBacktest:self.df_result:%s' %(self.df_result))
@@ -2299,7 +2451,10 @@ class Trainer():
 
     # 2025/2/22 accountにトレード期間中(開始の１つ前と終了のひとつ後)のtick dataをdataFrameで渡す
     self.acnt.DropTickDataPeriod()
-    self.acnt.SetTickDataPeriod(previous_start_datetime,tmp_end_date_time+self.delta_time)
+    # 2026/8/21 tickデータ不備によりtickデータがセットできない場合は、処理を中断する（呼び出し元でテストをスキップさせる）
+    if(not self.acnt.SetTickDataPeriod(previous_start_datetime,tmp_end_date_time+self.delta_time)):
+      logger_trainer.warning('Trainer.UpdateTradePeriod:No tick data in SetTickDataPeriod()')
+      return(False)
 
     # 2026/3/15 Copilotによるパフォーマンスチューニング
     ticks = self.acnt.ticks_frame
@@ -2344,7 +2499,7 @@ class Trainer():
         bar_dt = next_bar_dt
     # Accountにbar_to_tickを渡す
     self.acnt.bar_to_tick_minute = self.bar_to_tick_minute
-    return
+    return(True)
 
   def SaveParameters(self,Parameters,Modelname=None):
     self.acnt.SaveIniFile(Parameters.account)
@@ -2389,7 +2544,7 @@ class Trainer():
 # ## クラス TrainDataMaker
 # - PraiceData, StaticData, TrainDataの作成をコントロールする
 
-# In[ ]:
+# In[34]:
 
 
 #@title class TrainDataMaker
@@ -2491,16 +2646,20 @@ class TrainDataMaker():
 # ## Dependency
 # このパッケージを実行する前にPyPortfolioOptをインストールする
 
-# from pypfopt.efficient_frontier import EfficientFrontier
-# import numpy as np
-# import matplotlib.pyplot as plt
-# ## for comandline 以下をコメントアウトする
-# # %matplotlib inline
-# import MetaTrader5 as mt5
+# In[35]:
+
+
+from pypfopt.efficient_frontier import EfficientFrontier
+import numpy as np
+import matplotlib.pyplot as plt
+## for comandline 以下をコメントアウトする
+# %matplotlib inline
+import MetaTrader5 as mt5
+
 
 # ## Logger Portfolio
 
-# In[ ]:
+# In[36]:
 
 
 #@title Logger Portfolio
@@ -2522,7 +2681,7 @@ logger_portfolio.critical('Critical level massage.')
 
 # ## クラス PortfolioConstructer
 
-# In[ ]:
+# In[37]:
 
 
 #@title PortfolioConstructer
@@ -2679,7 +2838,7 @@ class PortfolioConstructer:
 # ## Logger
 # - StabのLoggerインスタンスはlogger_rootとする
 
-# In[17]:
+# In[38]:
 
 
 #@title Logger Stab
@@ -2876,7 +3035,7 @@ if __name__ == '__main__':
     # 訓練する時間(開始日)をランダムに設定する。
     # どの訓練期間であっても、年は共通(2018～2022)
     # 2024/12/21 MT5サーバのtickが取得できないため、2020～2023に変更
-    YEAR = random.randint(2021,2023)
+    YEAR = random.randint(2021,2024)
     if(TEST_DURATION == 'Y'):
       # 訓練期間が年単位の場合は、第2週目の月曜日(weekday=1)から
       WEEKNUM = 2
@@ -2927,13 +3086,29 @@ if __name__ == '__main__':
 
       else:
         # AgentList[p]にオブジェクトがある場合(前世代からの生き残り)でも、訓練期間(test_date_time)を更新する
-        AgentList[p].UpdateTradePeriod(test_date_time,TEST_DURATION)
+        # 2026/8/21 トレーニング期間中のtickが取得できないなど、トレーニングができないときはシステムエラーとする
+        if(not AgentList[p].UpdateTradePeriod(test_date_time,TEST_DURATION)):
+          # トレーニングを終了させる
+          ## ForComandline
+          # 標準出力で999を返す
+          print(999)
+          logger_root.error('Stab.MakeTrainDataAndTrainModel:While UpdateTradePeriod, some problem has occured.')
+          sys.exit('Training halted.')         
         # PriceDataとTrainDataも取得する
         periods_dict = PriceDataDicts[p]
         train_data_dict = TrainDataDicts[p]
 
       # 実際のトレーニング
       df_result = AgentList[p].TrainAgent(epinum=EPISODE_NUM, train_mode=True)
+      # 2026/8/21 トレーニング期間中のtickが取得できないなど、トレーニングができないときは Noneを取得し、システムエラーとする
+      if(df_result is None):
+        # トレーニングを終了させる
+        ## ForComandline
+        # 標準出力で999を返す
+        print(999)
+        logger_root.error('Stab.MakeTrainDataAndTrainModel:While Training, some problem has occured.')
+        sys.exit('Training halted.')         
+
       logger_root.info('■□■TrainModel:%s_%s Gen %d, Agent %d, Train Finish.■□■\n %s' %(TRADE_SYMBOL, TRADE_PERIOD, gnum+1, p+1,df_result.tail()))
 
       # ★★ForTest
