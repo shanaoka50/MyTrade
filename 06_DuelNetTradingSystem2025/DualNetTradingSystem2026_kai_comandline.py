@@ -21,7 +21,7 @@
 
 # ## Dependency
 
-# In[20]:
+# In[1]:
 
 
 #@title Dependency
@@ -51,7 +51,7 @@ import connectorx as cx
 # - SYMBOL_3DIGITS：小数点以下が3桁の通貨ペア(USDJPY等)の配列
 # - DIGIT_MAGNIFICATION：通貨ペアごとの倍率辞書(5桁：100倍、4桁10倍、3桁1倍)
 
-# In[21]:
+# In[2]:
 
 
 # @title Class Valiables
@@ -77,38 +77,47 @@ LOGGING_INIFILE_PATH = inifile.get(EXEC_ENV, 'LOGGING_INIFILE_PATH')
 PRICEDATA_PATH = None
 PRICEDATA_PATH_REAL = inifile.get(EXEC_ENV, 'PRICEDATA_PATH_REAL')
 PRICEDATA_PATH_DEMO = inifile.get(EXEC_ENV, 'PRICEDATA_PATH_DEMO')
+PRICEDATA_PATH_DEMOXM = inifile.get(EXEC_ENV, 'PRICEDATA_PATH_DEMOXM')
 # TRAIN_MODEL_PATH = inifile.get('COLABO', 'TRAIN_MODEL_PATH_COLABO')
 TRAIN_MODEL_PATH = None
 TRAIN_MODEL_PATH_REAL = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_REAL')
 TRAIN_MODEL_PATH_DEMO = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_DEMO')
+TRAIN_MODEL_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_DEMOXM')
 # TRAIN_MODEL_PATH_VOID = inifile.get('COLABO', 'TRAIN_MODEL_PATH_COLABO')
 TRAIN_MODEL_PATH_VOID = None
 TRAIN_MODEL_PATH_VOID_REAL = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_VOID_REAL')
 TRAIN_MODEL_PATH_VOID_DEMO = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_VOID_DEMO')
+TRAIN_MODEL_PATH_VOID_DEMOXM = inifile.get(EXEC_ENV, 'TRAIN_MODEL_PATH_VOID_DEMOXM')
 # TMP_TRAIN_MODEL_PATH = inifile.get('COLABO', 'TMP_TRAIN_MODEL_PARTH_COLABO')
 TMP_TRAIN_MODEL_PATH = None
 TMP_TRAIN_MODEL_PATH_REAL = inifile.get(EXEC_ENV, 'TMP_TRAIN_MODEL_PATH_REAL')
 TMP_TRAIN_MODEL_PATH_DEMO = inifile.get(EXEC_ENV, 'TMP_TRAIN_MODEL_PATH_DEMO')
+TMP_TRAIN_MODEL_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TMP_TRAIN_MODEL_PATH_DEMOXM')
 # TRADE_MODEL_PATH = inifile.get('COLABO', 'TRADE_MODEL_PATH_COLABO')
 TRADE_MODEL_PATH = None
 TRADE_MODEL_PATH_REAL = inifile.get(EXEC_ENV, 'TRADE_MODEL_PATH_REAL')
 TRADE_MODEL_PATH_DEMO = inifile.get(EXEC_ENV, 'TRADE_MODEL_PATH_DEMO')
+TRADE_MODEL_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TRADE_MODEL_PATH_DEMOXM')
 # TRADE_RESULT_PATH
 TRADE_RESULT_PATH = None
 TRADE_RESULT_PATH_REAL = inifile.get(EXEC_ENV, 'TRADE_MODEL_PATH_REAL')
 TRADE_RESULT_PATH_DEMO = inifile.get(EXEC_ENV, 'TRADE_RESULT_PATH_DEMO')
+TRADE_RESULT_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TRADE_RESULT_PATH_DEMOXM')
 # TRAIN_RESULT_PATH
 TRAIN_RESULT_PATH = None
 TRAIN_RESULT_PATH_REAL = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_REAL')
 TRAIN_RESULT_PATH_DEMO = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_DEMO')
+TRAIN_RESULT_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_DEMOXM')
 # TRAIN_RESULT_PATH_VOID
 TRAIN_RESULT_PATH_VOID = None
 TRAIN_RESULT_PATH_VOID_REAL = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_VOID_REAL')
 TRAIN_RESULT_PATH_VOID_DEMO = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_VOID_DEMO')
+TRAIN_RESULT_PATH_VOID_DEMOXM = inifile.get(EXEC_ENV, 'TRAIN_RESULT_PATH_VOID_DEMOXM')
 # TMP_TRAIN_RESULT_PATH
 TMP_TRAIN_RESULT_PATH = None
 TMP_TRAIN_RESULT_PATH_REAL = inifile.get(EXEC_ENV, 'TMP_TRAIN_RESULT_PATH_REAL')
 TMP_TRAIN_RESULT_PATH_DEMO = inifile.get(EXEC_ENV, 'TMP_TRAIN_RESULT_PATH_DEMO')
+TMP_TRAIN_RESULT_PATH_DEMOXM = inifile.get(EXEC_ENV, 'TMP_TRAIN_RESULT_PATH_DEMOXM')
 
 BACKTEST_RESULT_ALL_FILE_NAME = inifile.get('COMMOM', 'BACKTEST_RESULT_ALL_FILE_NAME')
 BACKTEST_ALL_FILE_NAME = inifile.get('COMMOM', 'BACKTEST_ALL_FILE_NAME')
@@ -152,12 +161,14 @@ GAMMA = 0.99
 ACCOUNT_TRADE_MODE_DEMO = 0
 ACCOUNT_TRADE_MODE_CONTEST = 1
 ACCOUNT_TRADE_MODE_REAL = 2
+ACCOUNT_TRADE_MODE_DEMOXM = 3
 # ログ出力用トレードモード文字列
-ACCOUNT_TRADE_MODE_STR=['DEMO','CONTEST','REAL']
+ACCOUNT_TRADE_MODE_STR=['DEMO','CONTEST','REAL','DEMOXM']
 # MT5実行ファイルの場所
 MT5_PATH = None
 MT5_REAL_PATH = inifile.get('LOCAL', 'mt5_real_path')
 MT5_DEMO_PATH = inifile.get('LOCAL', 'mt5_demo_path')
+MT5_DEMOXM_PATH = inifile.get('LOCAL', 'mt5_demoxm_path')
 # ask-bidの差の閾値
 REAL_SPREAD_LIMIT_LIST = eval(inifile.get('LOCAL', 'REAL_SPREAD_LIMIT_LIST'))
 # RealSpreadが閾値を超えていた場合の再試行回数
@@ -196,6 +207,7 @@ HOST='localhost'
 DBNAME=None
 DBNAME_DEMO='metaquotesdemo'
 DBNAME_REAL='xmtradingreal'
+DBNAME_DEMOXM='xmtradingdemo'
 PORT='5432'
 USER='appop'
 PASSWORD='appop'
@@ -215,7 +227,7 @@ CONN_URL=None
 # 
 # Environment package では、ログ空間を"DRL.Environment"とする
 
-# In[22]:
+# In[3]:
 
 
 #@title Logger
@@ -285,7 +297,7 @@ logger.critical('Critical level massage.')
 # 
 # 
 
-# In[23]:
+# In[4]:
 
 
 #@title class EnvironmentCommon
@@ -481,7 +493,7 @@ class EnvironmentCommon:
       TMP_TRAIN_RESULT_PATH = TMP_TRAIN_RESULT_PATH_REAL
       DBNAME = DBNAME_REAL
 
-    else:
+    elif trdmd == ACCOUNT_TRADE_MODE_DEMO:
       PRICEDATA_PATH = PRICEDATA_PATH_DEMO
       TRAIN_MODEL_PATH = TRAIN_MODEL_PATH_DEMO
       TRAIN_MODEL_PATH_VOID = TRAIN_MODEL_PATH_VOID_DEMO
@@ -492,6 +504,18 @@ class EnvironmentCommon:
       TRAIN_RESULT_PATH_VOID = TRAIN_RESULT_PATH_VOID_DEMO
       TMP_TRAIN_RESULT_PATH = TMP_TRAIN_RESULT_PATH_DEMO
       DBNAME = DBNAME_DEMO
+
+    else:
+      PRICEDATA_PATH = PRICEDATA_PATH_DEMOXM
+      TRAIN_MODEL_PATH = TRAIN_MODEL_PATH_DEMOXM
+      TRAIN_MODEL_PATH_VOID = TRAIN_MODEL_PATH_VOID_DEMOXM
+      TMP_TRAIN_MODEL_PATH = TMP_TRAIN_MODEL_PATH_DEMOXM
+      TRADE_MODEL_PATH = TRADE_MODEL_PATH_DEMOXM
+      TRADE_RESULT_PATH = TRADE_RESULT_PATH_DEMOXM
+      TRAIN_RESULT_PATH = TRAIN_RESULT_PATH_DEMOXM
+      TRAIN_RESULT_PATH_VOID = TRAIN_RESULT_PATH_VOID_DEMOXM
+      TMP_TRAIN_RESULT_PATH = TMP_TRAIN_RESULT_PATH_DEMOXM
+      DBNAME = DBNAME_DEMOXM
   '''
   @classmethod
   def send_line_notify(cls,notification_message):
@@ -660,7 +684,7 @@ class EnvironmentCommon:
 #    - 時間足データ(pandas.DataFrame)
 # 
 
-# In[24]:
+# In[5]:
 
 
 #@title class PriceData
@@ -776,7 +800,7 @@ class PriceData:
 # 
 # メモ：GetRewardとResetRewardを作る
 
-# In[25]:
+# In[6]:
 
 
 #@title class TrainData
@@ -862,7 +886,7 @@ class TrainData:
 #  - 1epi=1週の時は、月曜日の0:00が最初(=0)、土曜日の0:00の2つ前の足が最後(=1)
 #  - 1epi=1年の時は、当年のISO第1週目の月曜日の0:00が最初(=0)、翌年のISO第1週の2週前の土曜日の0:00の2つ前の足が最後(=1)
 
-# In[26]:
+# In[7]:
 
 
 #@title class Account
@@ -1099,7 +1123,7 @@ class Account:
             pass
         '''
         # ---- pandas.query を使わず numpy で高速判定 ----
-        # 1角時間足分のtick dataframe(_ticks_period)からbidの値をnumpyに抜き出す
+        # 1時間足分のtick dataframe(_ticks_period)からbidの値をnumpyに抜き出す
         bids = _ticks_period['bid'].to_numpy()
         # takeprofit_priceを超えた行番号(index)を早い順に書き出す
         hit_tp = np.where(bids >= self.takeprofit_price)[0]
@@ -1584,7 +1608,7 @@ class Account:
 
 # ## Dependency
 
-# In[27]:
+# In[8]:
 
 
 #@title Dependency
@@ -1600,7 +1624,7 @@ import math
 # ## Logger
 # - Loggerの実行は、Environmentと切り離されたときに実行する
 
-# In[28]:
+# In[9]:
 
 
 #@title Logger Agent
@@ -1645,7 +1669,7 @@ logger_agent.critical('Critical level massage.')
 # a5:PositionClose&ShortEntry<br>
 # ※両建てはしない。ドテンを想定する。
 
-# In[29]:
+# In[10]:
 
 
 #@title class Agent { output-height: 200 }
@@ -1853,7 +1877,7 @@ class Agent():
 # ## クラス Brain
 # Agent内のニューラルネット部分をBrainクラスとして別途定義
 
-# In[30]:
+# In[11]:
 
 
 #@title class Brain { output-height: 200 }
@@ -2025,7 +2049,7 @@ class Brain(nn.Module):
 # ## Logger
 # - TrainerパッケージのLoggerインスタンスはlogger_trainerとする
 
-# In[31]:
+# In[12]:
 
 
 #@title Logger Trainer
@@ -2047,7 +2071,7 @@ logger_trainer.critical('Critical level massage.')
 
 # ## クラス Trainer
 
-# In[39]:
+# In[13]:
 
 
 #@title class Trainer
@@ -2544,7 +2568,7 @@ class Trainer():
 # ## クラス TrainDataMaker
 # - PraiceData, StaticData, TrainDataの作成をコントロールする
 
-# In[34]:
+# In[14]:
 
 
 #@title class TrainDataMaker
@@ -2646,7 +2670,7 @@ class TrainDataMaker():
 # ## Dependency
 # このパッケージを実行する前にPyPortfolioOptをインストールする
 
-# In[35]:
+# In[15]:
 
 
 from pypfopt.efficient_frontier import EfficientFrontier
@@ -2659,7 +2683,7 @@ import MetaTrader5 as mt5
 
 # ## Logger Portfolio
 
-# In[36]:
+# In[16]:
 
 
 #@title Logger Portfolio
@@ -2681,7 +2705,7 @@ logger_portfolio.critical('Critical level massage.')
 
 # ## クラス PortfolioConstructer
 
-# In[37]:
+# In[17]:
 
 
 #@title PortfolioConstructer
@@ -2797,7 +2821,9 @@ class PortfolioConstructer:
         else:
           # EnvironmentCommon.send_line_notify(ACCOUNT_TRADE_MODE_STR[ACCOUNT_TRADE_MODE]+'\n'+TRADE_SYSTEM+'\n'+TRADE_SYMBOL+'_'+TRADE_PERIOD
           #                                      +'EfficientFrontier.CalcOrderLots:Account Trade Mode is not defined.')
-          sys.exit("EfficientFrontier.CalcOrderLots:Account Trade Mode is not defined.")
+          # sys.exit("EfficientFrontier.CalcOrderLots:Account Trade Mode is not defined.")
+          MT5_PATH = inifile.get(EXEC_ENV, 'mt5_demoxm_path')
+          growth_rate = float(inifile.get(EXEC_ENV, 'GROWTH_RATE_DEMOXM'))
 
         portfolio.read(TRADE_MODEL_PATH+MODEL_PORTFOLIO_FILE_NAME,'UTF-8')
         logger_portfolio.debug("EfficientFrontier.CalcOrderLots:MT5_PATH=%s" %(MT5_PATH))
@@ -2838,7 +2864,7 @@ class PortfolioConstructer:
 # ## Logger
 # - StabのLoggerインスタンスはlogger_rootとする
 
-# In[38]:
+# In[18]:
 
 
 #@title Logger Stab
@@ -2881,11 +2907,13 @@ if __name__ == '__main__':
     ACCOUNT_TRADE_MODE = ACCOUNT_TRADE_MODE_REAL
   elif args[1] == 'DEMO':
     ACCOUNT_TRADE_MODE = ACCOUNT_TRADE_MODE_DEMO
+  elif args[1] == 'DEMOXM':
+    ACCOUNT_TRADE_MODE = ACCOUNT_TRADE_MODE_DEMOXM
   else:
     logger_root.error('Stab Make_Train_Data_and_Train_Model: train_mode can select from REAL or DEMO.')
     # 標準出力で999を返す
     print(999)
-    sys.exit('Stab Make_Train_Data_and_Train_Model: train_mode can select from REAL or DEMO.')
+    sys.exit('Stab Make_Train_Data_and_Train_Model: train_mode can select from REAL ,DEMO or DEMOXM.')
 
   TRAIN_SYMBOL_LIST = ['EURUSD','USDJPY','GBPUSD','EURJPY','EURGBP','GBPJPY']
   ## For Comandline
@@ -2947,8 +2975,8 @@ if __name__ == '__main__':
   # テスト期間は1episodeの長さ。1日(D)、1週間(W)、1年(Y)を選択する
   TEST_DURATION = 'W' #@param ['D', 'W', 'Y']
   # BackTestを行う期間(default:2020-2023)
-  BACKTEST_START_YEAR = 2021 #@param {type:"slider", min:2018, max:2030, step:1}
-  BACKTEST_END_YEAR = 2024 #@param {type:"slider", min:2018, max:2030, step:1}
+  BACKTEST_START_YEAR = 2023 #@param {type:"slider", min:2018, max:2030, step:1}
+  BACKTEST_END_YEAR = 2025 #@param {type:"slider", min:2018, max:2030, step:1}
   BACKTEST_DURATION = 'W' #@param ['D', 'W', 'Y']
 
   # For DDQN Target Q-NNとMain Q-NNを同期する頻度(何episode毎か)(defoult:3)
@@ -3035,7 +3063,7 @@ if __name__ == '__main__':
     # 訓練する時間(開始日)をランダムに設定する。
     # どの訓練期間であっても、年は共通(2018～2022)
     # 2024/12/21 MT5サーバのtickが取得できないため、2020～2023に変更
-    YEAR = random.randint(2021,2024)
+    YEAR = random.randint(2023,2025)
     if(TEST_DURATION == 'Y'):
       # 訓練期間が年単位の場合は、第2週目の月曜日(weekday=1)から
       WEEKNUM = 2
