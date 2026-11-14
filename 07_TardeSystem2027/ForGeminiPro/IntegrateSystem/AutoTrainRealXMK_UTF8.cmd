@@ -3,6 +3,23 @@ rem コマンドプロンプトで使用する文字コードをUTF-8に設定�
 chcp 65001 >nul
 
 setlocal enabledelayedexpansion
+
+rem 実行年月日の取得 (yyyymmdd形式、ロケール非依存で確実に取得)
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd"') do set TODAY=%%i
+
+rem ログディレクトリの作成とログファイルパスの設定
+set LOG_DIR=.\Log
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+set LOG_FILE=%LOG_DIR%\log_%TODAY%.log
+
+rem 内部呼び出しフラグがある場合はメイン処理を実行
+if "%~1"==":RUN_MAIN" goto MAIN
+
+rem 自身を :RUN_MAIN 付きで再起動し、標準出力・標準エラーを文字列化してコンソールとログファイルへ同時追記
+powershell -NoProfile -Command "& { & '%~f0' :RUN_MAIN 2>&1 | ForEach-Object { \"$_\" } | Tee-Object -FilePath '%LOG_FILE%' -Append }"
+exit /b %ERRORLEVEL%
+
+:MAIN
 rem TradingSystem2027_comandline.py のトレーニングを繰り返し行えるようにする
 
 rem 仮想環境内のpython.exeへの絶対パスを指定します
@@ -43,23 +60,26 @@ set NTFY_TAGS=loudspeaker
 
 rem トレーニングのサブルーチン
 :TRAIN_MODEL
-echo トレーニングを開始します
+echo ============================================================
+echo [%DATE% %TIME%] トレーニングを開始します
+echo ============================================================
 
 rem 外側のforループは通貨ペア
 FOR /L %%s IN (%symbol_start%,1,%symbol_end%) DO (
     echo symbol_num=%%s
     rem トレーニング実行
     echo %exec_prog_name% %exec_file_name% %account_atrade_mode% !symbol[%%s]! %max_train_num% %train_num_each_batch%
-    rem 標準出力の最終行（トレーニング数）を取得するようにする
-    for /f "delims=" %%L in ('%exec_prog_name% %exec_file_name% %account_atrade_mode% !symbol[%%s]! %max_train_num% %train_num_each_batch%') do (
-		set "lastLine=%%L"
+    rem 標準出力の最終行（トレーニング数）を取得しつつ、Pythonのログもリアルタイム表示させる
+    for /f "delims=" %%L in ('%exec_prog_name% -u %exec_file_name% %account_atrade_mode% !symbol[%%s]! %max_train_num% %train_num_each_batch%') do (
+        echo %%L
+        set "lastLine=%%L"
     )
     echo ERRORLEVEL=!ERRORLEVEL!
     if !ERRORLEVEL! equ 0 (
-    	echo Pythonスクリプトは正常終了しました。
+        echo Pythonスクリプトは正常終了しました。
     ) else (
-	echo Pythonスクリプトでエラーが発生しました。
-	exit /b 1
+        echo Pythonスクリプトでエラーが発生しました。
+        exit /b 1
     )
     set finish_train_num[%%s]=!lastLine!
     rem トレーニング終了数を取得する
@@ -82,3 +102,4 @@ rem ntfyへPOSTリクエストを送信
 curl -H "Title: %NTFY_TITLE%" -H "Priority: %NTFY_PRIORITY%" -H "Tags: %NTFY_TAGS%" -d "%NTFY_MESSAGE%" %NTFY_SERVER%/%NTFY_TOPIC%
 
 echo メッセージを送信しました。
+exit /b 0

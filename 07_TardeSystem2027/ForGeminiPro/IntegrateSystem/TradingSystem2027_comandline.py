@@ -535,12 +535,27 @@ class Account(BaseAccount):
         self.cur_pos_sl = 0.0           # 最終S/L
         self.cur_pos_tp = 0.0           # 最終T/P
 
-    def SetTradePeriod(self, stdt, trdl):
+    def SetTradePeriod(self, stdt, trdl, price_index=None):
         self.ini_datetime = stdt
         self.train_duration = trdl
         if self.train_duration == 'W':
-            self.start_period = (self.ini_datetime + timedelta(days=1 - (self.ini_datetime.isoweekday() % 7))).replace(hour=0, minute=0, second=0, microsecond=0)
-            self.end_period = (self.ini_datetime + timedelta(days=6 - (self.ini_datetime.isoweekday() % 7))).replace(hour=0, minute=0, second=0, microsecond=0) - self.delta_period
+            # 基準となる週の月曜00:00:00 〜 金曜23:59:59（土日データを完全に除外）
+            week_mon = (self.ini_datetime + timedelta(days=1 - (self.ini_datetime.isoweekday() % 7))).replace(hour=0, minute=0, second=0, microsecond=0)
+            week_fri = week_mon + timedelta(days=5) - timedelta(seconds=1)
+
+            if price_index is not None:
+                # 実際のH1バーデータから該当週（月〜金）のバーのみを抽出
+                week_bars = price_index[(price_index >= week_mon) & (price_index <= week_fri)]
+                if len(week_bars) >= 2:
+                    self.start_period = week_bars[0].to_pydatetime()
+                    self.end_period = week_bars[-1].to_pydatetime()
+                    # 最終バー（金曜の最終足）の1本前をトレード終了リミットに設定
+                    self.end_trade = week_bars[-2].to_pydatetime()
+                    return
+
+            # フォールバック（price_index未指定時）
+            self.start_period = week_mon
+            self.end_period = week_fri.replace(minute=0, second=0)
             self.end_trade = self.end_period - self.delta_period
 
     def CheckTpLc(self, lstdt, lstprc):
@@ -1012,6 +1027,9 @@ class Trainer():
         )
         self.pre_trade_weeks = self.acnt.pre_trade_weeks
 
+        # Trainer.__init__ 内の Account 生成直後（453行目付近）を以下のように調整
+        h1_index = self.periods_dict[self.period][self.symbol].price_list.index
+        self.acnt.SetTradePeriod(self.start_date_time, self.test_duration, price_index=h1_index)
         self.start_date_time, self.end_date_time = self.acnt.start_period, self.acnt.end_period
         self.delta_time = CoreEnvironment.GetPeriodTimeDelta(self.period)
 
@@ -1076,6 +1094,12 @@ class Trainer():
             if price_obj.GetPriceData(lstdt).empty:
                 continue
 
+            # ★ 修正: 次の実バーが存在すればその時刻を tstdt にし、最終バーのみ +delta_time とする
+            if idx + 1 < total_bars:
+                tstdt = bar_list[idx + 1][0]
+            else:
+                tstdt = lstdt + self.delta_time
+            
             self.acnt.CheckTpLc(lstdt, price_obj.GetPriceData(lstdt))
             self.acnt.CalcCountdown(lstdt)
             # 変更前:
@@ -1112,7 +1136,7 @@ class Trainer():
             action_counts[act_val] = action_counts.get(act_val, 0) + 1
 
             self.acnt.EvaluateRewrd(act_val, tstdt, lstdt, price_obj.GetPriceData(tstdt))
-            tstdt += self.delta_time
+            # tstdt += self.delta_time
 
         if not pretrade_flg:
             long_trade_count = int((self.acnt.df_account['close_type'] == 1).sum())
@@ -1205,8 +1229,10 @@ class Trainer():
 
         return self.df_backtest_result
         
+    # Trainer.UpdateTradePeriod 冒頭（579行目付近）
     def UpdateTradePeriod(self, stdt, tstdl):
-        self.acnt.SetTradePeriod(stdt, tstdl)
+        h1_index = self.periods_dict[self.period][self.symbol].price_list.index
+        self.acnt.SetTradePeriod(stdt, tstdl, price_index=h1_index)
         tmp_start_date_time, tmp_end_date_time = self.acnt.start_period, self.acnt.end_period
         self.end_date_time = tmp_end_date_time
 
@@ -1359,7 +1385,7 @@ if __name__ == '__main__':
     # Test期間の合格基準（足切りライン）
     TEST_PASS_MIN_PF     = 1.15
     TEST_PASS_MIN_TRADES = 20   # 24週（約半年）なら20〜25回程度が現実的でおすすめです
-    TEST_PASS_MAX_DD     = 2.0    # 最大ドローダウン許容値 (2,000 pips相当)
+    TEST_PASS_MAX_DD     = 4.0    # 最大ドローダウン許容値 (4,000 pips相当)
     TEST_MIN_SIDE_RATIO    = 0.15   # ロング・ショートの最小比率 (各20%以上)→15%へ緩和
 
     # Optuna Study の初期化
