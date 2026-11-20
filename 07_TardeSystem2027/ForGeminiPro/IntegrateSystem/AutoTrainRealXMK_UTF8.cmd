@@ -8,7 +8,7 @@ rem 実行年月日の取得 (yyyymmdd形式、ロケール非依存で確実に
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd"') do set TODAY=%%i
 
 rem ログディレクトリの作成とログファイルパスの設定
-set LOG_DIR=.\Log
+set LOG_DIR=.\Log\RealXMK
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 set LOG_FILE=%LOG_DIR%\log_%TODAY%.log
 
@@ -28,7 +28,7 @@ set exec_file_name=TradingSystem2027_comandline.py
 set trade_system=System2027
 
 set account_atrade_mode=REALXMK
-set max_train_num=1
+set max_train_num=4
 set train_num_each_batch=1
 
 set symbol_start=0
@@ -70,17 +70,18 @@ FOR /L %%s IN (%symbol_start%,1,%symbol_end%) DO (
     rem トレーニング実行
     echo %exec_prog_name% %exec_file_name% %account_atrade_mode% !symbol[%%s]! %max_train_num% %train_num_each_batch%
     rem 標準出力の最終行（トレーニング数）を取得しつつ、Pythonのログもリアルタイム表示させる
+    set "lastLine="
     for /f "delims=" %%L in ('%exec_prog_name% -u %exec_file_name% %account_atrade_mode% !symbol[%%s]! %max_train_num% %train_num_each_batch%') do (
         echo %%L
         set "lastLine=%%L"
     )
-    echo ERRORLEVEL=!ERRORLEVEL!
-    if !ERRORLEVEL! equ 0 (
-        echo Pythonスクリプトは正常終了しました。
-    ) else (
-        echo Pythonスクリプトでエラーが発生しました。
+    rem lastLine が純粋な数値（完了世代数）かどうかを判定（例外終了時はログ文字列になるためエラー検知可能）
+    echo !lastLine!| findstr /r "^[0-9][0-9]*$" >nul
+    if !ERRORLEVEL! neq 0 (
+        echo Pythonスクリプトが異常終了しました。最終出力: !lastLine!
         exit /b 1
     )
+    echo Pythonスクリプトは正常終了しました。
     set finish_train_num[%%s]=!lastLine!
     rem トレーニング終了数を取得する
     echo Symbol: !symbol[%%s]! Train has finished. TRANINGRESULT=!finish_train_num[%%s]!
